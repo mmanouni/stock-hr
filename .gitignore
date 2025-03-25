@@ -1,0 +1,8 @@
+node_modules/
+.git/
+stock-hr-client/node_modules/
+stock-hr-server/node_modules/
+dist/
+build/
+.DS_Store
+.env

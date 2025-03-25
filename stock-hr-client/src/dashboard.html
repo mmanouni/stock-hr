@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stock HR Dashboard</title>
+  <!-- Bootstrap CSS for modern styling -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Chart.js for Reports -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f6f8;
+      overflow: hidden;
+    }
+    /* Sidebar styles */
+    .sidebar {
+      background: #2c3e50;
+      color: #ecf0f1;
+      min-height: 100vh;
+      padding: 20px;
+      position: fixed;
+      width: 250px;
+    }
+    .sidebar h2 {
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+    .sidebar .nav-link {
+      color: #ecf0f1;
+      margin-bottom: 10px;
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
+    }
+    .sidebar .nav-link:hover {
+      text-decoration: underline;
+    }
+    /* Main content area */
+    .content {
+      margin-left: 260px;
+      padding: 20px;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    .dashboard-card {
+      background: #3498db;
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    .section {
+      display: none;
+    }
+    .section.active {
+      display: block;
+    }
+    .nested-tabs .nav-link {
+      cursor: pointer;
+    }
+    .loading {
+      font-style: italic;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Sidebar Navigation -->
+      <nav class="col-md-2 sidebar">
+        <h2>Stock HR</h2>
+        <ul class="nav flex-column">
+          <li class="nav-item"><a class="nav-link" onclick="showSection('dashboard')">Dashboard Overview</a></li>
+          <li class="nav-item"><a class="nav-link" onclick="showSection('stockManagement')">Stock Management</a></li>
+          <li class="nav-item"><a class="nav-link" onclick="showSection('hrManagement')">HR Management</a></li>
+          <li class="nav-item"><a class="nav-link" onclick="showSection('settings')">Settings</a></li>
+          <li class="nav-item"><a class="nav-link" onclick="showSection('licenseActivation')">License Activation</a></li>
+          <li class="nav-item"><a class="nav-link" onclick="showSection('reports')">Reports</a></li>
+          <li class="nav-item mt-3"><a class="nav-link btn btn-danger" onclick="logout()">Logout</a></li>
+        </ul>
+      </nav>
+      
+      <!-- Main Content Area -->
+      <main class="col-md-10 content">
+        <!-- Dashboard Overview Section -->
+        <div id="dashboard" class="section active">
+          <h2>Dashboard Overview</h2>
+          <div class="row">
+            <div class="col-md-4">
+              <div class="dashboard-card">Total Products: <span id="totalProducts">0</span></div>
+            </div>
+            <div class="col-md-4">
+              <div class="dashboard-card">Total Employees: <span id="totalEmployees">0</span></div>
+            </div>
+            <div class="col-md-4">
+              <div class="dashboard-card">Total Suppliers: <span id="totalSuppliers">0</span></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Stock Management Section with Nested Tabs -->
+        <div id="stockManagement" class="section">
+          <h2>Stock Management</h2>
+          <ul class="nav nav-tabs" id="stockTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="products-tab" data-bs-toggle="tab" data-bs-target="#productsTab" type="button" role="tab">Products</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="suppliersStock-tab" data-bs-toggle="tab" data-bs-target="#suppliersStockTab" type="button" role="tab">Suppliers</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="categoriesStock-tab" data-bs-toggle="tab" data-bs-target="#categoriesStockTab" type="button" role="tab">Categories</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="purchaseOrders-tab" data-bs-toggle="tab" data-bs-target="#purchaseOrdersTab" type="button" role="tab">Purchase Orders</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="sales-tab" data-bs-toggle="tab" data-bs-target="#salesTab" type="button" role="tab">Sales</button>
+            </li>
+          </ul>
+          <div class="tab-content nested-tabs mt-3" id="stockTabsContent">
+            <!-- Products Tab -->
+            <div class="tab-pane fade show active" id="productsTab" role="tabpanel">
+              <h4>Products</h4>
+              <div id="productsLoading" class="loading">Loading products...</div>
+              <table class="table table-striped" id="productsTable" style="display:none;">
+                <thead><tr><th>Name</th><th>Quantity</th><th>Price</th></tr></thead>
+                <tbody id="productsTbody"></tbody>
+              </table>
+              <div class="mt-3">
+                <input type="text" id="productName" class="form-control mb-2" placeholder="Product Name" />
+                <input type="number" id="productQuantity" class="form-control mb-2" placeholder="Quantity" />
+                <input type="number" id="productPrice" class="form-control mb-2" placeholder="Price" />
+                <button class="btn btn-primary" onclick="addProduct()">Add Product</button>
+              </div>
+            </div>
+            <!-- Suppliers Tab -->
+            <div class="tab-pane fade" id="suppliersStockTab" role="tabpanel">
+              <h4>Suppliers</h4>
+              <div id="suppliersLoading" class="loading">Loading suppliers...</div>
+              <table class="table table-striped" id="suppliersTable" style="display:none;">
+                <thead><tr><th>Name</th><th>Contact</th></tr></thead>
+                <tbody id="suppliersTbody"></tbody>
+              </table>
+              <div class="mt-3">
+                <input type="text" id="supplierName" class="form-control mb-2" placeholder="Supplier Name" />
+                <input type="text" id="contactName" class="form-control mb-2" placeholder="Contact Name" />
+                <input type="text" id="supplierPhone" class="form-control mb-2" placeholder="Phone" />
+                <input type="email" id="supplierEmail" class="form-control mb-2" placeholder="Email" />
+                <input type="text" id="supplierAddress" class="form-control mb-2" placeholder="Address" />
+                <button class="btn btn-primary" onclick="addSupplier()">Add Supplier</button>
+              </div>
+            </div>
+            <!-- Categories Tab -->
+            <div class="tab-pane fade" id="categoriesStockTab" role="tabpanel">
+              <h4>Categories</h4>
+              <div id="categoriesLoading" class="loading">Loading categories...</div>
+              <table class="table table-striped" id="categoriesTable" style="display:none;">
+                <thead><tr><th>Name</th><th>Description</th></tr></thead>
+                <tbody id="categoriesTbody"></tbody>
+              </table>
+              <div class="mt-3">
+                <input type="text" id="categoryName" class="form-control mb-2" placeholder="Category Name" />
+                <input type="text" id="categoryDescription" class="form-control mb-2" placeholder="Description" />
+                <button class="btn btn-primary" onclick="addCategory()">Add Category</button>
+              </div>
+            </div>
+            <!-- Purchase Orders Tab -->
+            <div class="tab-pane fade" id="purchaseOrdersTab" role="tabpanel">
+              <h4>Purchase Orders</h4>
+              <div id="purchaseOrdersLoading" class="loading">Loading purchase orders...</div>
+              <table class="table table-striped" id="purchaseOrdersTable" style="display:none;">
+                <thead><tr><th>Order ID</th><th>Supplier ID</th><th>Date</th><th>Status</th><th>Total Amount</th></tr></thead>
+                <tbody id="purchaseOrdersTbody"></tbody>
+              </table>
+              <div class="mt-3">
+                <input type="number" id="poSupplierId" class="form-control mb-2" placeholder="Supplier ID" />
+                <input type="date" id="poDate" class="form-control mb-2" placeholder="Order Date" />
+                <input type="text" id="poStatus" class="form-control mb-2" placeholder="Status" />
+                <input type="number" id="poTotalAmount" class="form-control mb-2" placeholder="Total Amount" />
+                <button class="btn btn-primary" onclick="addPurchaseOrder()">Add Purchase Order</button>
+              </div>
+            </div>
+            <!-- Sales Tab -->
+            <div class="tab-pane fade" id="salesTab" role="tabpanel">
+              <h4>Sales</h4>
+              <div id="salesLoading" class="loading">Loading sales...</div>
+              <table class="table table-striped" id="salesTable" style="display:none;">
+                <thead><tr><th>Sale ID</th><th>Customer ID</th><th>Date</th><th>Total Amount</th></tr></thead>
+                <tbody id="salesTbody"></tbody>
+              </table>
+              <div class="mt-3">
+                <input type="number" id="saleCustomerId" class="form-control mb-2" placeholder="Customer ID" />
+                <input type="date" id="saleDate" class="form-control mb-2" placeholder="Sale Date" />
+                <input type="number" id="saleTotalAmount" class="form-control mb-2" placeholder="Total Amount" />
+                <button class="btn btn-primary" onclick="addSale()">Add Sale</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HR Management Section with Nested Tabs -->
+        <div id="hrManagement" class="section">
+          <h2>HR Management</h2>
+          <ul class="nav nav-tabs" id="hrTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="employeesHR-tab" data-bs-toggle="tab" data-bs-target="#employeesHRTab" type="button" role="tab">Employees</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="payrollHR-tab" data-bs-toggle="tab" data-bs-target="#payrollHRTab" type="button" role="tab">Payroll</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="attendance-tab" data-bs-toggle="tab" data-bs-target="#attendanceTab" type="button" role="tab">Attendance</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="evaluations-tab" data-bs-toggle="tab" data-bs-target="#evaluationsTab" type="button" role="tab">Evaluations</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="recruitment-tab" data-bs-toggle="tab" data-bs-target="#recruitmentTab" type="button" role="tab">Recruitment</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="applicants-tab" data-bs-toggle="tab" data-bs-target="#applicantsTab" type="button" role="tab">Applicants</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="interviews-tab" data-bs-toggle="tab" data-bs-target="#interviewsTab" type="button" role="tab">Interviews</button>
+            </li>
+          </ul>
+          <div class="tab-content nested-tab mt-3" id="hrTabsContent">
+            <!-- Employees Tab -->
+            <div class="tab-pane fade show active" id="employeesHRTab" role="tabpanel">
+              <h4>Employees</h4>
+              <div id="employeesLoading" class="loading">Loading employees...</div>
+              <table class="table table-striped" id="employeesTable" style="display:none;">
+                <thead><tr><th>Name</th><th>Email</th><th>Job Title</th></tr></thead>
+                <tbody id="employeesTbody"></tbody>
+              </table>
+              <div class="mt-3">
+                <div class="row g-3 mb-3">
+                  <div class="col-md-6"><input type="text" id="firstNameHR" class="form-control" placeholder="First Name" /></div>
+                  <div class="col-md-6"><input type="text" id="lastNameHR" class="form-control" placeholder="Last Name" /></div>
+                </div>
+                <div class="mb-3"><input type="email" id="emailHR" class="form-control" placeholder="Email" /></div>
+                <div class="mb-3"><input type="text" id="phoneHR" class="form-control" placeholder="Phone" /></div>
+                <div class="mb-3"><input type="text" id="addressHR" class="form-control" placeholder="Address" /></div>
+                <div class="mb-3"><input type="date" id="hireDateHR" class="form-control" /></div>
+                <div class="mb-3"><input type="text" id="jobTitleHR" class="form-control" placeholder="Job Title" /></div>
+                <div class="mb-3"><input type="number" id="departmentIdHR" class="form-control" placeholder="Department ID" /></div>
+                <div class="mb-3"><input type="number" id="salaryHR" class="form-control" placeholder="Salary" /></div>
+                <button class="btn btn-primary" onclick="addEmployeeHR()">Add Employee</button>
+                <button class="btn btn-secondary" onclick="fetchEmployeesHR()">Refresh Employees</button>
+              </div>
+            </div>
+            <!-- Payroll Tab -->
+            <div class="tab-pane fade" id="payrollHRTab" role="tabpanel">
+              <h4>Payroll</h4>
+              <div id="payrollLoading" class="loading">Loading payroll data...</div>
+              <table class="table table-striped" id="payrollTable" style="display:none;">
+                <thead><tr><th>Employee ID</th><th>Gross Salary</th><th>Deductions</th><th>Net Salary</th></tr></thead>
+                <tbody id="payrollTbody"></tbody>
+              </table>
+              <div class="mt-3">
+                <input type="number" id="employeeIdPayroll" class="form-control mb-2" placeholder="Employee ID" />
+                <input type="date" id="payDate" class="form-control mb-2" placeholder="Pay Date" />
+                <input type="number" id="grossSalary" class="form-control mb-2" placeholder="Gross Salary" />
+                <input type="number" id="deductions" class="form-control mb-2" placeholder="Deductions" />
+                <input type="number" id="netSalary" class="form-control mb-2" placeholder="Net Salary" />
+                <button class="btn btn-primary" onclick="addPayroll()">Add Payroll</button>
+                <button class="btn btn-secondary" onclick="fetchPayroll()">Refresh Payroll</button>
+              </div>
+            </div>
+            <!-- Attendance Tab -->
+            <div class="tab-pane fade" id="attendanceTab" role="tabpanel">
+              <h4>Attendance</h4>
+              <div id="attendanceLoading" class="loading">Loading attendance data...</div>
+              <table class="table table-striped" id="attendanceTable" style="display:none;">
+                <thead><tr><th>Employee ID</th><th>Date</th><th>Time In</th><th>Time Out</th><th>Status</th></tr></thead>
+                <tbody id="attendanceTbody"></tbody>
+              </table>
+              <div class="mt-3">
+                <input type="number" id="employeeIdAttendance" class="form-control mb-2" placeholder="Employee ID" />
+                <input type="date" id="attendanceDate" class="form-control mb-2" placeholder="Attendance Date" />
+                <input type="time" id="timeIn" class="form-control mb-2" placeholder="Time In" />
+                <input type="time" id="timeOut" class="form-control mb-2" placeholder="Time Out" />
+                <input type="text" id="attendanceStatus" class="form-control mb-2" placeholder="Status" />
+                <button class="btn btn-primary" onclick="addAttendance()">Add Attendance</button>
+                <button class="btn btn-secondary" onclick="fetchAttendance()">Refresh Attendance</button>
+              </div>
+            </div>
+            <!-- Evaluations Tab -->
+            <div class="tab-pane fade" id="evaluationsTab" role="tabpanel">
+              <h4>Evaluations</h4>
+              <div id="evaluationsLoading" class="loading">Loading evaluations...</div>
+              <table class="table table-striped" id="evaluationsTable" style="display:none;">
+                <thead><tr><th>Employee ID</th><th>Date</th><th>Evaluator</th><th>Comments</th><th>Rating</th></tr></thead>
+                <tbody id="evaluationsTbody"></tbody>
+              </table>
+              <div class="mt-3">
+                <input type="number" id="employeeIdEval" class="form-control mb-2" placeholder="Employee ID" />
+                <input type="date" id="evalDate" class="form-control mb-2" placeholder="Evaluation Date" />
+                <input type="text" id="evaluator" class="form-control mb-2" placeholder="Evaluator" />
+                <input type="text" id="comments" class="form-control mb-2" placeholder="Comments" />
+                <input type="number" id="rating" class="form-control mb-2" placeholder="Rating" />
+                <button class="btn btn-primary" onclick="addEvaluation()">Add Evaluation</button>
+                <button class="btn btn-secondary" onclick="fetchEvaluations()">Refresh Evaluations</button>
+              </div>
+            </div>
+            <!-- Recruitment Tab -->
+            <div class="tab-pane fade" id="recruitmentTab" role="tabpanel">
+              <h4>Recruitment</h4>
+              <div id="recruitmentLoading" class="loading">Loading recruitment data...</div>
+              <table class="table table-striped" id="recruitmentTable" style="display:none;">
+                <thead><tr><th>Position</th><th>Department ID</th><th>Open Date</th><th>Close Date</th><th>Status</th></tr></thead>
+                <tbody id="recruitmentTbody"></tbody>
+              </table>
+              <div class="mt-3">
+                <input type="text" id="position" class="form-control mb-2" placeholder="Position" />
+                <input type="number" id="departmentIdRecruit" class="form-control mb-2" placeholder="Department ID" />
+                <input type="date" id="openDate" class="form-control mb-2" placeholder="Open Date" />
+                <input type="date" id="closeDate" class="form-control mb-2" placeholder="Close Date" />
+                <input type="text" id="recruitmentStatus" class="form-control mb-2" placeholder="Status" />
+                <button class="btn btn-primary" onclick="addRecruitment()">Add Recruitment</button>
+                <button class="btn btn-secondary" onclick="fetchRecruitment()">Refresh Recruitment</button>
+              </div>
+            </div>
+            <!-- Applicants Tab -->
+            <div class="tab-pane fade" id="applicantsTab" role="tabpanel">
+              <h4>Applicants</h4>
+              <div id="applicantsLoading" class="loading">Loading applicants...</div>
+              <table class="table table-striped" id="applicantsTable" style="display:none;">
+                <thead><tr><th>Name</th><th>Email</th><th>Applied Position</th><th>Status</th></tr></thead>
+                <tbody id="applicantsTbody"></tbody>
+              </table>
+              <div class="mt-3">
+                <input type="text" id="applicantFirstName" class="form-control mb-2" placeholder="First Name" />
+                <input type="text" id="applicantLastName" class="form-control mb-2" placeholder="Last Name" />
+                <input type="email" id="applicantEmail" class="form-control mb-2" placeholder="Email" />
+                <input type="text" id="applicantPhone" class="form-control mb-2" placeholder="Phone" />
+                <input type="text" id="resume" class="form-control mb-2" placeholder="Resume Path" />
+                <input type="text" id="appliedPosition" class="form-control mb-2" placeholder="Applied Position" />
+                <input type="text" id="applicantStatus" class="form-control mb-2" placeholder="Status" />
+                <button class="btn btn-primary" onclick="addApplicant()">Add Applicant</button>
+                <button class="btn btn-secondary" onclick="fetchApplicants()">Refresh Applicants</button>
+              </div>
+            </div>
+            <!-- Interviews Tab -->
+            <div class="tab-pane fade" id="interviewsTab" role="tabpanel">
+              <h4>Interviews</h4>
+              <div id="interviewsLoading" class="loading">Loading interviews...</div>
+              <table class="table table-striped" id="interviewsTable" style="display:none;">
+                <thead><tr><th>Applicant ID</th><th>Date</th><th>Interviewer</th><th>Comments</th><th>Result</th></tr></thead>
+                <tbody id="interviewsTbody"></tbody>
+              </table>
+              <div class="mt-3">
+                <input type="number" id="interviewApplicantId" class="form-control mb-2" placeholder="Applicant ID" />
+                <input type="datetime-local" id="interviewDate" class="form-control mb-2" placeholder="Interview Date" />
+                <input type="text" id="interviewer" class="form-control mb-2" placeholder="Interviewer" />
+                <input type="text" id="interviewComments" class="form-control mb-2" placeholder="Comments" />
+                <input type="text" id="interviewResult" class="form-control mb-2" placeholder="Result" />
+                <button class="btn btn-primary" onclick="addInterview()">Add Interview</button>
+                <button class="btn btn-secondary" onclick="fetchInterviews()">Refresh Interviews</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Section with Nested Tabs -->
+        <div id="settings" class="section">
+          <h2>Settings</h2>
+          <ul class="nav nav-tabs" id="settingsTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="userMgmt-tab" data-bs-toggle="tab" data-bs-target="#userMgmtTab" type="button" role="tab">User Management</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="accountSettings-tab" data-bs-toggle="tab" data-bs-target="#accountSettingsTab" type="button" role="tab">Account Settings</button>
+            </li>
+          </ul>
+          <div class="tab-content mt-3" id="settingsTabsContent">
+            <!-- User Management Tab -->
+            <div class="tab-pane fade show active" id="userMgmtTab" role="tabpanel">
+              <button class="btn btn-primary" onclick="fetchUsers()">Load Users</button>
+              <ul id="user-list" class="list-group mt-3"></ul>
+              <p class="mt-2">Manage user accounts: add, deactivate/reactivate users.</p>
+            </div>
+            <!-- Account Settings Tab -->
+            <div class="tab-pane fade" id="accountSettingsTab" role="tabpanel">
+              <div class="form-group"><input type="password" id="oldPassword" class="form-control" placeholder="Old Password" /></div>
+              <div class="form-group"><input type="password" id="newPassword" class="form-control" placeholder="New Password" /></div>
+              <button class="btn btn-primary" onclick="changePassword()">Change Password</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- License Activation Section (Admin Only) -->
+        <div id="licenseActivation" class="section">
+          <h2>License Activation</h2>
+          <div class="form-group"><input type="text" id="licenseKey" class="form-control" placeholder="License Key" /></div>
+          <div class="form-group"><input type="text" id="hardwareId" class="form-control" placeholder="Hardware ID" /></div>
+          <button class="btn btn-primary" onclick="activateLicense()">Activate License</button>
+        </div>
+
+        <!-- Reports Section -->
+        <div id="reports" class="section">
+          <h2>Reports</h2>
+          <canvas id="reportChart" width="400" height="200"></canvas>
+          <button class="btn btn-secondary mt-3" onclick="loadReport()">Load Report</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Management Section -->
+  <section id="user-management">
+    <h2>User Management</h2>
+    <table id="user-table">
+      <!-- Table headers and rows will be populated dynamically -->
+    </table>
+    <form id="add-user-form">
+      <!-- Form fields for adding a new user -->
+    </form>
+    <!-- Buttons for deactivating/reactivating users -->
+  </section>
+
+  <!-- Change Password Section -->
+  <section id="change-password">
+    <h2>Change Password</h2>
+    <form id="change-password-form">
+      <!-- Form fields for changing password -->
+    </form>
+  </section>
+
+  <!-- Stock Management Section -->
+  <section id="stock-management">
+    <h2>Stock Management</h2>
+    <!-- Products -->
+    <div id="products">
+      <h3>Products</h3>
+      <table id="product-table">
+        <!-- Table headers and rows will be populated dynamically -->
+      </table>
+      <form id="add-product-form">
+        <!-- Form fields for adding a new product -->
+      </form>
+    </div>
+    <!-- Suppliers -->
+    <div id="suppliers">
+      <h3>Suppliers</h3>
+      <table id="supplier-table">
+        <!-- Table headers and rows will be populated dynamically -->
+      </table>
+      <form id="add-supplier-form">
+        <!-- Form fields for adding a new supplier -->
+      </form>
+    </div>
+    <!-- Categories -->
+    <div id="categories">
+      <h3>Categories</h3>
+      <table id="category-table">
+        <!-- Table headers and rows will be populated dynamically -->
+      </table>
+      <form id="add-category-form">
+        <!-- Form fields for adding a new category -->
+      </form>
+    </div>
+    <!-- Purchase Orders -->
+    <div id="purchase-orders">
+      <h3>Purchase Orders</h3>
+      <table id="purchase-order-table">
+        <!-- Table headers and rows will be populated dynamically -->
+      </table>
+      <form id="add-purchase-order-form">
+        <!-- Form fields for creating a new purchase order -->
+      </form>
+    </div>
+    <!-- Sales -->
+    <div id="sales">
+      <h3>Sales</h3>
+      <table id="sales-table">
+        <!-- Table headers and rows will be populated dynamically -->
+      </table>
+      <form id="add-sale-form">
+        <!-- Form fields for recording a new sale -->
+      </form>
+    </div>
+  </section>
+
+  <!-- HR Management Section -->
+  <section id="hr-management">
+    <h2>HR Management</h2>
+    <!-- Employees -->
+    <div id="employees">
+      <h3>Employees</h3>
+      <table id="employee-table">
+        <!-- Table headers and rows will be populated dynamically -->
+      </table>
+      <form id="add-employee-form">
+        <!-- Form fields for adding a new employee -->
+      </form>
+    </div>
+    <!-- Payroll -->
+    <div id="payroll">
+      <h3>Payroll</h3>
+      <table id="payroll-table">
+        <!-- Table headers and rows will be populated dynamically -->
+      </table>
+      <form id="add-payroll-form">
+        <!-- Form fields for adding a new payroll record -->
+      </form>
+    </div>
+    <!-- Attendance -->
+    <div id="attendance">
+      <h3>Attendance</h3>
+      <table id="attendance-table">
+        <!-- Table headers and rows will be populated dynamically -->
+      </table>
+      <form id="mark-attendance-form">
+        <!-- Form fields for marking attendance -->
+      </form>
+    </div>
+    <!-- Evaluations -->
+    <div id="evaluations">
+      <h3>Evaluations</h3>
+      <table id="evaluation-table">
+        <!-- Table headers and rows will be populated dynamically -->
+      </table>
+      <form id="add-evaluation-form">
+        <!-- Form fields for adding an evaluation record -->
+      </form>
+    </div>
+    <!-- Recruitment -->
+    <div id="recruitment">
+      <h3>Recruitment</h3>
+      <table id="recruitment-table">
+        <!-- Table headers and rows will be populated dynamically -->
+      </table>
+      <form id="add-job-form">
+        <!-- Form fields for adding a new job opening -->
+      </form>
+    </div>
+    <!-- Applicants -->
+    <div id="applicants">
+      <h3>Applicants</h3>
+      <table id="applicant-table">
+        <!-- Table headers and rows will be populated dynamically -->
+      </table>
+      <form id="add-applicant-form">
+        <!-- Form fields for adding a new applicant -->
+      </form>
+    </div>
+    <!-- Interviews -->
+    <div id="interviews">
+      <h3>Interviews</h3>
+      <table id="interview-table">
+        <!-- Table headers and rows will be populated dynamically -->
+      </table>
+      <form id="schedule-interview-form">
+        <!-- Form fields for scheduling a new interview -->
+      </form>
+    </div>
+  </section>
+
+  <!-- License Activation Section -->
+  <section id="license-activation">
+    <h2>License Activation</h2>
+    <form id="activate-license-form">
+      <!-- Form fields for activating software -->
+    </form>
+  </section>
+
+  <!-- Authentication & Logout Section -->
+  <section id="authentication">
+    <h2>Authentication</h2>
+    <button id="logout-button">Logout</button>
+  </section>
+
+  <!-- General Enhancements -->
+  <script>
+    // Ensure token authentication is included in every request
+    // Load data dynamically for each section
+    // Prefill forms when editing existing entries
+  </script>
+
+  <script>
+    // Navigation: Show selected section
+    function showSection(section) {
+      document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+      document.getElementById(section).style.display = 'block';
+    }
+
+    // Navigation: Show nested tab (for settings, etc.)
+    function showTab(tab) {
+      document.querySelectorAll('.tab-pane').forEach(t => t.classList.remove('active'));
+      document.getElementById(tab).classList.add('active');
+    }
+
+    // Logout: Clear token and redirect to login
+    function logout() {
+      alert("Logging out...");
+      window.location.href = "index.html";
+    }
+
+    // Dashboard Counts
+    async function fetchCounts() {
+      const products = await fetch("http://localhost:3000/products").then(res => res.json());
+      document.getElementById("totalProducts").innerText = products.length;
+      const employees = await fetch("http://localhost:3000/employees").then(res => res.json());
+      document.getElementById("totalEmployees").innerText = employees.length;
+      const suppliers = await fetch("http://localhost:3000/suppliers").then(res => res.json());
+      document.getElementById("totalSuppliers").innerText = suppliers.length;
+    }
+
+    // STOCK MANAGEMENT FUNCTIONS
+    async function fetchProducts() {
+      document.getElementById("productsTable").style.display = "none";
+      document.getElementById("productsLoading").style.display = "block";
+      const response = await fetch("http://localhost:3000/products");
+      const products = await response.json();
+      const tbody = document.getElementById("productsTbody");
+      tbody.innerHTML = "";
+      products.forEach(product => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${product.name}</td><td>${product.stock_quantity || 0}</td><td>$${product.price}</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("productsLoading").style.display = "none";
+      document.getElementById("productsTable").style.display = "table";
+    }
+    async function addProduct() {
+      const name = document.getElementById("productName").value;
+      const quantity = document.getElementById("productQuantity").value;
+      const price = document.getElementById("productPrice").value;
+      await fetch("http://localhost:3000/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, stock_quantity: quantity, price })
+      });
+      fetchProducts();
+    }
+
+    // HR MANAGEMENT FUNCTIONS
+    async function fetchEmployeesHR() {
+      document.getElementById("employeesTable").style.display = "none";
+      document.getElementById("employeesLoading").style.display = "block";
+      const response = await fetch("http://localhost:3000/employees");
+      const employees = await response.json();
+      const tbody = document.getElementById("employeesTbody");
+      tbody.innerHTML = "";
+      employees.forEach(emp => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${emp.first_name} ${emp.last_name}</td><td>${emp.email}</td><td>${emp.job_title}</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("employeesLoading").style.display = "none";
+      document.getElementById("employeesTable").style.display = "table";
+    }
+    async function addEmployeeHR() {
+      const first_name = document.getElementById("firstNameHR").value;
+      const last_name = document.getElementById("lastNameHR").value;
+      const email = document.getElementById("emailHR").value;
+      const phone = document.getElementById("phoneHR").value;
+      const address = document.getElementById("addressHR").value;
+      const hire_date = document.getElementById("hireDateHR").value;
+      const job_title = document.getElementById("jobTitleHR").value;
+      const department_id = document.getElementById("departmentIdHR").value;
+      const salary = document.getElementById("salaryHR").value;
+      await fetch("http://localhost:3000/employees", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ first_name, last_name, email, phone, address, hire_date, job_title, department_id, salary })
+      });
+      fetchEmployeesHR();
+    }
+
+    async function fetchPayroll() {
+      document.getElementById("payrollTable").style.display = "none";
+      document.getElementById("payrollLoading").style.display = "block";
+      const response = await fetch("http://localhost:3000/payroll");
+      const payrolls = await response.json();
+      const tbody = document.getElementById("payrollTbody");
+      tbody.innerHTML = "";
+      payrolls.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${p.employee_id}</td><td>${p.gross_salary}</td><td>${p.deductions}</td><td>${p.net_salary}</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("payrollLoading").style.display = "none";
+      document.getElementById("payrollTable").style.display = "table";
+    }
+    async function addPayroll() {
+      const employee_id = document.getElementById("employeeIdPayroll").value;
+      const pay_date = document.getElementById("payDate").value;
+      const gross_salary = document.getElementById("grossSalary").value;
+      const deductions = document.getElementById("deductions").value;
+      const net_salary = document.getElementById("netSalary").value;
+      await fetch("http://localhost:3000/payroll", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employee_id, pay_date, gross_salary, deductions, net_salary })
+      });
+      fetchPayroll();
+    }
+
+    async function fetchAttendance() {
+      document.getElementById("attendanceTable").style.display = "none";
+      document.getElementById("attendanceLoading").style.display = "block";
+      const response = await fetch("http://localhost:3000/attendance");
+      const records = await response.json();
+      const tbody = document.getElementById("attendanceTbody");
+      tbody.innerHTML = "";
+      records.forEach(rec => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${rec.employee_id}</td><td>${rec.attendance_date}</td><td>${rec.time_in}</td><td>${rec.time_out}</td><td>${rec.status}</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("attendanceLoading").style.display = "none";
+      document.getElementById("attendanceTable").style.display = "table";
+    }
+    async function addAttendance() {
+      const employee_id = document.getElementById("employeeIdAttendance").value;
+      const attendance_date = document.getElementById("attendanceDate").value;
+      const time_in = document.getElementById("timeIn").value;
+      const time_out = document.getElementById("timeOut").value;
+      const status = document.getElementById("attendanceStatus").value;
+      await fetch("http://localhost:3000/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employee_id, attendance_date, time_in, time_out, status })
+      });
+      fetchAttendance();
+    }
+
+    async function fetchEvaluations() {
+      document.getElementById("evaluationsTable").style.display = "none";
+      document.getElementById("evaluationsLoading").style.display = "block";
+      const response = await fetch("http://localhost:3000/evaluations");
+      const evaluations = await response.json();
+      const tbody = document.getElementById("evaluationsTbody");
+      tbody.innerHTML = "";
+      evaluations.forEach(ev => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${ev.employee_id}</td><td>${ev.evaluation_date}</td><td>${ev.evaluator}</td><td>${ev.comments}</td><td>${ev.rating}</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("evaluationsLoading").style.display = "none";
+      document.getElementById("evaluationsTable").style.display = "table";
+    }
+    async function addEvaluation() {
+      const employee_id = document.getElementById("employeeIdEval").value;
+      const evaluation_date = document.getElementById("evalDate").value;
+      const evaluator = document.getElementById("evaluator").value;
+      const comments = document.getElementById("comments").value;
+      const rating = document.getElementById("rating").value;
+      await fetch("http://localhost:3000/evaluations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employee_id, evaluation_date, evaluator, comments, rating })
+      });
+      fetchEvaluations();
+    }
+
+    async function fetchRecruitment() {
+      document.getElementById("recruitmentTable").style.display = "none";
+      document.getElementById("recruitmentLoading").style.display = "block";
+      const response = await fetch("http://localhost:3000/recruitment");
+      const recruitment = await response.json();
+      const tbody = document.getElementById("recruitmentTbody");
+      tbody.innerHTML = "";
+      recruitment.forEach(rec => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${rec.position}</td><td>${rec.department_id}</td><td>${rec.open_date}</td><td>${rec.close_date}</td><td>${rec.status}</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("recruitmentLoading").style.display = "none";
+      document.getElementById("recruitmentTable").style.display = "table";
+    }
+    async function addRecruitment() {
+      const position = document.getElementById("position").value;
+      const department_id = document.getElementById("departmentIdRecruit").value;
+      const open_date = document.getElementById("openDate").value;
+      const close_date = document.getElementById("closeDate").value;
+      const status = document.getElementById("recruitmentStatus").value;
+      await fetch("http://localhost:3000/recruitment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ position, department_id, open_date, close_date, status })
+      });
+      fetchRecruitment();
+    }
+
+    async function fetchApplicants() {
+      document.getElementById("applicantsTable").style.display = "none";
+      document.getElementById("applicantsLoading").style.display = "block";
+      const response = await fetch("http://localhost:3000/applicants");
+      const applicants = await response.json();
+      const tbody = document.getElementById("applicantsTbody");
+      tbody.innerHTML = "";
+      applicants.forEach(app => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${app.first_name} ${app.last_name}</td><td>${app.email}</td><td>${app.applied_position}</td><td>${app.status}</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("applicantsLoading").style.display = "none";
+      document.getElementById("applicantsTable").style.display = "table";
+    }
+    async function addApplicant() {
+      const first_name = document.getElementById("applicantFirstName").value;
+      const last_name = document.getElementById("applicantLastName").value;
+      const email = document.getElementById("applicantEmail").value;
+      const phone = document.getElementById("applicantPhone").value;
+      const resume = document.getElementById("resume").value;
+      const appliedPosition = document.getElementById("appliedPosition").value;
+      const applicantStatus = document.getElementById("applicantStatus").value;
+      await fetch("http://localhost:3000/applicants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ first_name, last_name, email, phone, resume, applied_position: appliedPosition, status: applicantStatus })
+      });
+      fetchApplicants();
+    }
+
+    async function fetchInterviews() {
+      document.getElementById("interviewsTable").style.display = "none";
+      document.getElementById("interviewsLoading").style.display = "block";
+      const response = await fetch("http://localhost:3000/interviews");
+      const interviews = await response.json();
+      const tbody = document.getElementById("interviewsTbody");
+      tbody.innerHTML = "";
+      interviews.forEach(intv => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${intv.applicant_id}</td><td>${intv.interview_date}</td><td>${intv.interviewer}</td><td>${intv.comments}</td><td>${intv.result}</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("interviewsLoading").style.display = "none";
+      document.getElementById("interviewsTable").style.display = "table";
+    }
+    async function addInterview() {
+      const applicant_id = document.getElementById("interviewApplicantId").value;
+      const interview_date = document.getElementById("interviewDate").value;
+      const interviewer = document.getElementById("interviewer").value;
+      const interviewComments = document.getElementById("interviewComments").value;
+      const interviewResult = document.getElementById("interviewResult").value;
+      await fetch("http://localhost:3000/interviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ applicant_id, interview_date, interviewer, comments: interviewComments, result: interviewResult })
+      });
+      fetchInterviews();
+    }
+
+    // Settings: Change Password
+    async function changePassword() {
+      const oldPassword = document.getElementById("oldPassword").value;
+      const newPassword = document.getElementById("newPassword").value;
+      // Implement actual API call to change password
+      alert("Password change feature coming soon!");
+    }
+
+    // License Activation
+    async function activateLicense() {
+      const licenseKey = document.getElementById("licenseKey").value;
+      const hardwareId = document.getElementById("hardwareId").value;
+      const response = await fetch("http://localhost:3000/activate-license", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ licenseKey, hardwareId })
+      });
+      const result = await response.json();
+      alert(result.message);
+    }
+
+    // Reports: Load sample chart using Chart.js
+    async function loadReport() {
+      const ctx = document.getElementById('reportChart').getContext('2d');
+      const myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Products', 'Employees', 'Suppliers'],
+          datasets: [{
+            label: 'Counts',
+            data: [
+              document.getElementById("totalProducts").innerText,
+              document.getElementById("totalEmployees").innerText,
+              document.getElementById("totalSuppliers").innerText
+            ],
+            backgroundColor: ['#3498db', '#2ecc71', '#e74c3c']
+          }]
+        },
+        options: { responsive: true }
+      });
+    }
+
+    // Initialize dashboard counts on page load
+    fetchCounts();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login</title>
+</head>
+<body>
+  <h1>Login</h1>
+  <form id="loginForm">
+    <input type="text" id="username" placeholder="Username" required>
+    <input type="password" id="password" placeholder="Password" required>
+    <button type="submit">Login</button>
+  </form>
+  <script>
+    const apiUrl = process.env.REACT_APP_API_URL;
+
+    document.getElementById('loginForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      // Implement your login logic here
+      // For example, validate credentials and set authToken in localStorage
+      localStorage.setItem('authToken', 'your-auth-token');
+      window.location.href = `${apiUrl}/dashboard.html`; // Ensure the correct path to dashboard.html
+    });
+  </script>
+</body>
+</html>
