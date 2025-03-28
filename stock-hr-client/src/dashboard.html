@@ -11,24 +11,24 @@
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #f4f6f8;
+      background: #f8f9fa;
       overflow: hidden;
     }
     /* Sidebar styles */
     .sidebar {
       background: #2c3e50;
-      color: #ecf0f1;
+      color: white;
       min-height: 100vh;
       padding: 20px;
       position: fixed;
       width: 250px;
     }
     .sidebar h2 {
-      font-size: 22px;
+      font-size: 24px;
       margin-bottom: 20px;
     }
     .sidebar .nav-link {
-      color: #ecf0f1;
+      color: white;
       margin-bottom: 10px;
       cursor: pointer;
       text-decoration: none;
@@ -219,6 +219,11 @@
               <button class="nav-link" id="attendance-tab" data-bs-toggle="tab" data-bs-target="#attendanceTab" type="button" role="tab">Attendance</button>
             </li>
             <li class="nav-item" role="presentation">
+              <button class="nav-link" id="departments-tab" data-bs-toggle="tab" data-bs-target="#departmentsTab" type="button" role="tab">
+                Departments
+              </button>
+            </li>            
+            <li class="nav-item" role="presentation">
               <button class="nav-link" id="evaluations-tab" data-bs-toggle="tab" data-bs-target="#evaluationsTab" type="button" role="tab">Evaluations</button>
             </li>
             <li class="nav-item" role="presentation">
@@ -273,6 +278,25 @@
                 <button class="btn btn-primary" onclick="addPayroll()">Add Payroll</button>
                 <button class="btn btn-secondary" onclick="fetchPayroll()">Refresh Payroll</button>
               </div>
+            </div>
+            <!-- Depatments Tab -->
+            <div class="tab-pane fade" id="departmentsTab" role="tabpanel">
+              <h4>Departments</h4>
+              <div id="departmentsLoading" class="loading">Loading departments...</div>
+              <table class="table table-striped" id="departmentsTable" style="display:none;">
+                <thead><tr><th>Department ID</th><th>Name</th></tr></thead>
+                <tbody id="departmentsTbody"></tbody>
+              </table>
+              <div class="mt-3">
+                <input type="text" id="departmentName" class="form-control mb-2" placeholder="Department Name" />
+                <button class="btn btn-primary" onclick="addDepartment()">Add Department</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="departmentIdHR">Department</label>
+              <select id="departmentIdHR" class="form-control">
+                <option value="">Select Department</option>
+              </select>
             </div>
             <!-- Attendance Tab -->
             <div class="tab-pane fade" id="attendanceTab" role="tabpanel">
@@ -704,6 +728,84 @@
       });
       fetchPayroll();
     }
+
+    async function fetchDepartments() {
+  document.getElementById("departmentsTable").style.display = "none";
+  document.getElementById("departmentsLoading").style.display = "block";
+
+  const token = localStorage.getItem("authToken"); // 🔥 Get the stored token
+  if (!token) {
+    console.error("❌ No auth token found, user is not logged in.");
+    return;
+  }
+
+  const response = await fetch("http://localhost:3000/api/departments", {
+    headers: {
+      "Authorization": `Bearer ${token}`, // 🔥 Send the token
+      "Content-Type": "application/json"
+    }
+  });
+
+  if (!response.ok) {
+    console.error("❌ Failed to fetch departments:", response.statusText);
+    return;
+  }
+
+  const departments = await response.json();
+  const tbody = document.getElementById("departmentsTbody");
+  tbody.innerHTML = "";
+
+  departments.forEach(dept => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${dept.id}</td><td>${dept.name}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById("departmentsLoading").style.display = "none";
+  document.getElementById("departmentsTable").style.display = "table";
+}
+
+
+async function addDepartment() {
+  const name = document.getElementById("departmentName").value;
+
+  await fetch("http://localhost:3000/api/departments", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${localStorage.getItem("authToken")}`
+    },
+    body: JSON.stringify({ name })
+  });
+
+  fetchDepartments(); // Reload departments after adding
+}
+
+
+    async function loadDepartmentsDropdown() {
+  try {
+    const response = await fetch("http://localhost:3000/api/departments");
+    if (!response.ok) throw new Error("Failed to fetch departments");
+
+    const departments = await response.json();
+    const select = document.getElementById("departmentIdHR");
+    select.innerHTML = '<option value="">Select Department</option>';
+
+    departments.forEach(dept => {
+      const option = document.createElement("option");
+      option.value = dept.id;
+      option.innerText = dept.name;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error("❌ Error loading departments:", error);
+  }
+}
+
+// Load departments when the page loads
+document.addEventListener('DOMContentLoaded', fetchDepartments);
+//window.addEventListener("DOMContentLoaded", loadDepartmentsDropdown);
+
 
     async function fetchAttendance() {
       document.getElementById("attendanceTable").style.display = "none";

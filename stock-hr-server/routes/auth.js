@@ -1,7 +1,8 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const { User } = require('../models'); 
+const { User } = require('../models');
+const authenticateToken = require('../middleware/auth'); // ✅ FIXED
 require('dotenv').config();
 
 const router = express.Router();
@@ -26,6 +27,11 @@ router.post('/login', async (req, res) => {
         console.error("Server error:", err);
         res.status(500).json({ message: "Server error, please try again later." });
     }
+});
+
+// ✅ Now this will work because authenticateToken is defined!
+router.get('/me', authenticateToken, (req, res) => {
+    res.json({ id: req.user.id, role: req.user.role });
 });
 
 module.exports = router;

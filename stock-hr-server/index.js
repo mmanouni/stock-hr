@@ -47,12 +47,12 @@ function authenticateToken(req, res, next) {
 }
 
 // Protected routes (authentication required)
-app.use('/api/products', authenticateToken, require('./routes/products'));
+app.use('/api/products', require('./routes/products'));  // No authentication required for now
 app.use('/api/suppliers', authenticateToken, require('./routes/suppliers'));
 app.use('/api/categories', authenticateToken, require('./routes/categories'));
 app.use('/api/purchaseOrders', authenticateToken, require('./routes/purchaseOrders'));
 app.use('/api/sales', authenticateToken, require('./routes/sales'));
-app.use('/api/employees', authenticateToken, require('./routes/employees'));
+app.use('/api/employees', require('./routes/employees')); // No authentication required for now
 app.use('/api/payroll', authenticateToken, require('./routes/payroll'));
 app.use('/api/attendance', authenticateToken, require('./routes/attendance'));
 app.use('/api/evaluations', authenticateToken, require('./routes/evaluations'));

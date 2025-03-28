@@ -48,4 +48,15 @@ router.delete('/:id', authenticateToken, authorizeRole('admin'), async (req, res
   }
 });
 
+// Public route to get departments without authentication
+router.get('/public', async (req, res) => {
+  try {
+    const departments = await Department.findAll();
+    res.json(departments);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch departments' });
+  }
+});
+
+
 module.exports = router;

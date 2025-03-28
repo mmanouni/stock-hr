@@ -48,11 +48,8 @@ ipcMain.handle("login-user", async (event, { username, password }) => {
         console.log("✅ Login success. Received Token:", response.data.token);
 
         // Set authToken as a session cookie in Electron
-        session.defaultSession.cookies.set({
-            url: "http://localhost",
-            name: "authToken",
-            value: response.data.token
-        });
+        return { success: true, token: response.data.token, message: "Login successful" };
+        
 
         return { success: true, token: response.data.token, message: "Login successful" };
     } catch (error) {
